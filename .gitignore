@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+.idea/
+.vscode/
+coverage/
+*.log
+*.tmp
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+blender-mcp-go/blender-mcp-go.exe
+blender-mcp-go/blender-mcp-go.exe~

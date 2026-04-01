@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: blender-mcp-go/go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Extract version
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Install npm deps
+        working-directory: npm
+        run: npm ci || true
+
+      - name: Build binaries
+        working-directory: npm
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          npm run build:all
+
+      - name: Remove existing release assets (rerun-safe)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          release_id="$(gh release view "${tag}" --json id -q .id 2>/dev/null || true)"
+          if [ -z "${release_id:-}" ]; then
+            exit 0
+          fi
+          gh release view "${tag}" --json assets -q '.assets[].name' 2>/dev/null \
+            | while read -r asset_name; do
+              if [ -n "${asset_name:-}" ]; then
+                gh release delete-asset "${tag}" "${asset_name}" --yes >/dev/null 2>&1 || true
+              fi
+            done
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            npm/dist/blender-mcp-go-win-x64.exe
+            npm/dist/blender-mcp-go-linux-x64
+            npm/dist/blender-mcp-go-darwin-arm64
+          generate_release_notes: true
+
+      - name: Publish to npm
+        working-directory: npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "Missing NPM_TOKEN secret (NODE_AUTH_TOKEN is empty)" >&2
+            exit 1
+          fi
+          cp ../README.md .
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          npm publish --access public || {
+            if npm view "@j4flmao/go_blender_mcp@$VERSION" >/dev/null 2>&1; then
+              echo "Version $VERSION already exists on npm, skipping publish."
+              exit 0
+            fi
+            exit 1
+          }

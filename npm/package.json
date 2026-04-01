@@ -1,0 +1,35 @@
+{
+  "name": "@j4flmao/go_blender_mcp",
+  "version": "2.0.0",
+  "description": "Blender MCP Go server wrapper for Claude MCP",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/j4flmao/go_blender_mcp.git"
+  },
+  "homepage": "https://github.com/j4flmao/go_blender_mcp",
+  "bugs": {
+    "url": "https://github.com/j4flmao/go_blender_mcp/issues"
+  },
+  "bin": {
+    "blender-mcp-go": "bin/blender-mcp-go.js"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "dist"
+  ],
+  "scripts": {
+    "build:win-x64": "node scripts/build.js --os windows --arch amd64 --out dist/blender-mcp-go-win-x64.exe",
+    "build:linux-x64": "node scripts/build.js --os linux --arch amd64 --out dist/blender-mcp-go-linux-x64",
+    "build:darwin-arm64": "node scripts/build.js --os darwin --arch arm64 --out dist/blender-mcp-go-darwin-arm64",
+    "build:all": "npm run build:win-x64 && npm run build:linux-x64 && npm run build:darwin-arm64",
+    "postinstall": "node scripts/postinstall.js",
+    "prepack": "npm run build:all",
+    "start": "node bin/blender-mcp-go.js",
+    "test": "node -e \"process.exit(0)\""
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
