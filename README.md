@@ -1,5 +1,7 @@
 # Blender MCP Go (npm-wrapped)
 
+> Works with any MCP client: **Claude Desktop**, **Amp** (ampcode.com), Cursor, VS Code Copilot, Cline, Continue, etc. Same binary, same JSON-RPC over stdio (`protocolVersion: 2024-11-05`).
+
 ![CI](https://github.com/j4flmao/go_blender_mcp/actions/workflows/ci.yml/badge.svg)
 [![npm version](https://img.shields.io/npm/v/%40j4flmao/go_blender_mcp.svg)](https://www.npmjs.com/package/@j4flmao/go_blender_mcp)
 ![license](https://img.shields.io/badge/license-MIT-green.svg)
@@ -47,18 +49,92 @@ Inspired by and referencing BlenderMCP (Python) project — see “References”
 ```
 Restart Claude Desktop after editing.
 
-Alternative (absolute path to binary):
+
+
+### Add to OpenCode
+OpenCode uses a different config format with `mcp` as root key and `command` as an array.
+
+Global config location:
+- Windows: `%APPDATA%\opencode\opencode.json`
+- macOS / Linux: `~/.config/opencode/opencode.json`
+
+Recommended (npx):
 ```json
 {
-  "mcpServers": {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
     "blender": {
-      "command": "D:\\blender_go_mcp\\npm\\dist\\blender-mcp-go-win-x64.exe",
-      "args": [],
-      "env": { }
+      "type": "local",
+      "command": ["npx", "-y", "@j4flmao/go_blender_mcp"],
+      "enabled": true
     }
   }
 }
 ```
+
+Or via project config — create `opencode.json` in your project root:
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "blender": {
+      "type": "local",
+      "command": ["npx", "-y", "@j4flmao/go_blender_mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+Notes for OpenCode:
+- Config key is `mcp` (not `mcpServers`)
+- `command` must be an array: `["npx", "-y", "@j4flmao/go_blender_mcp"]`
+- Must include `"type": "local"` for stdio servers
+- Restart OpenCode after editing config
+
+### Add to Amp (ampcode.com)
+Amp uses the same MCP schema as Claude, just under the `amp.mcpServers` key in `settings.json`.
+
+Settings file location:
+- Windows: `%APPDATA%\amp\settings.json`
+- macOS / Linux: `~/.config/amp/settings.json`
+- VS Code: Settings → Extensions → Amp → MCP Servers (or edit `settings.json` directly)
+
+Recommended (npx):
+```json
+{
+  "amp.mcpServers": {
+    "blender": {
+      "command": "npx",
+      "args": ["-y", "@j4flmao/go_blender_mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+Or via CLI (no manual file edit):
+```bash
+amp mcp add blender -- npx -y @j4flmao/go_blender_mcp
+```
+
+One-shot test without persisting config:
+```bash
+amp --mcp-config "{\"blender\":{\"command\":\"npx\",\"args\":[\"-y\",\"@j4flmao/go_blender_mcp\"]}}" -x "List all objects in the current Blender scene"
+```
+
+
+Notes for Amp:
+- Workspace-level configs in `.amp/settings.json` require `amp mcp approve blender` before first run.
+- To restrict which tools are exposed (recommended to keep context lean), use `includeTools`:
+  ```json
+  "blender": {
+    "command": "npx",
+    "args": ["-y", "@j4flmao/go_blender_mcp"],
+    "includeTools": ["get_scene_info", "list_objects", "create_object", "exec_python", "render_scene"]
+  }
+  ```
+- Verify Amp picks it up: `amp mcp doctor` → should list `blender` with the tool count.
 
 4. Optional integrations (UI-driven):
    - In Blender N-panel, open “Integrations”
